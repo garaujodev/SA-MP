@@ -1,0 +1,24 @@
+<?php
+$Email = $_GET['Email'];
+$Assunto = $_GET['Assunto'];
+$Mensagem = $_GET['Mensagem'];
+$From = $_GET['From'];
+
+$headers  = sprintf( 'Date: %s%s', date( "D, d M Y H:i:s O" ), PHP_EOL );
+$headers .= sprintf( 'Return-Path: %s%s', $From, PHP_EOL );
+$headers .= sprintf( 'To: %s%s', $Email, PHP_EOL );
+$headers .= sprintf( 'Subject: %s%s', $Assunto, PHP_EOL );
+$headers .= sprintf( 'Cc: %s%s', $Assunto, PHP_EOL );
+$headers .= sprintf( 'Bcc: San Andreas Multiplayer Server %s',PHP_EOL );
+$headers .= sprintf( 'From: %s%s', $From, PHP_EOL );
+$headers .= sprintf( 'Reply-To: %s%s', $From, PHP_EOL );
+$headers .= sprintf( 'Message-ID: <%s@%s>%s', md5( uniqid( rand( ), true ) ), $_SERVER[ 'HTTP_HOST' ], PHP_EOL );
+$headers .= sprintf( 'X-Priority: %d%s', 3, PHP_EOL );
+$headers .= sprintf( 'X-Mailer: PHP/%s%s', phpversion( ), PHP_EOL );
+$headers .= sprintf( 'Disposition-Notification-To: %s%s', $From, PHP_EOL );
+$headers .= sprintf( 'MIME-Version: 1.0%s', PHP_EOL );
+$headers .= sprintf( 'Content-Transfer-Encoding: 8bit%s', PHP_EOL );
+$headers .= sprintf( 'Content-Type: text/html; charset="iso-8859-1"%s', PHP_EOL );
+mail($Email, $Assunto, $Mensagem,$headers);
+
+?>
