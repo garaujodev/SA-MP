@@ -1,0 +1,304 @@
+#include <a_samp>
+#include <zcmd>
+#include <Bini>
+
+#define DCRIARCONTA 142
+#define DSENHACONTA 143
+#define DSENHA 144
+#define DSACAR 145
+#define DDEPOSITAR 146
+#define DSENHADEPOSITAR 147
+#define DSENHACONFIRMAR 148
+#define DMUDARSENHA 149
+#define DSALDO 150
+#define DTRANSFERIR 151
+#define DTRANSFERIRNUMERO 152
+#define DTRANSFERIRVALOR 153
+#define DINFO 154
+
+new nome[MAX_PLAYER_NAME];
+new arquivo[49];
+new string[128];
+enum PP
+{
+    Conta,
+    Numero,
+    Depositado,
+    Senha
+}
+new BancoInfo[MAX_PLAYERS][PP];
+
+public OnFilterScriptInit()
+{
+    CreateObject(2942, 1550.5789794922, -1669.7015380859, 13.204420089722, 0, 0, 270);
+    CreateObject(2942, 1550.6994628906, -1681.2255859375, 13.204420089722, 0, 0, 270);
+	return 1;
+}
+
+public OnFilterScriptExit()
+{
+	return 1;
+}
+public OnPlayerConnect(playerid)
+{
+    Carregar(playerid);
+	return 1;
+}
+public OnPlayerDisconnect(playerid, reason)
+{
+    Salvar(playerid);
+	return 1;
+}
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+{
+    if(dialogid == DSENHA)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo != BancoInfo[playerid][Senha]) return SendClientMessage(playerid,0xFF0000AA,"Senha Incorreta!");
+        ShowPlayerDialog(playerid,DSACAR,DIALOG_STYLE_INPUT,"Sacar","Digite a Quantidade a ser Sacada","Sacar","Cancelar");
+        }
+    }
+    if(dialogid == DSENHACONFIRMAR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo != BancoInfo[playerid][Senha]) return SendClientMessage(playerid,0xFF0000AA,"Senha Incorreta!");
+        ShowPlayerDialog(playerid,DMUDARSENHA,DIALOG_STYLE_INPUT,"Mudar Senha","Digite a Sua Nova Senha","Ok","Cancelar");
+        }
+    }
+    if(dialogid == DMUDARSENHA)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        format(string,50,"Senha Mudada a %i",Gustavo);
+        SendClientMessage(playerid,0x008000AA,string);
+        BancoInfo[playerid][Senha] = Gustavo;
+        Salvar(playerid);
+        }
+    }
+    if(dialogid == DSACAR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo > BancoInfo[playerid][Depositado]) return SendClientMessage(playerid,0xFF0000AA,"Voce nao tem tudo isso na sua conta do banco");
+        GivePlayerMoney(playerid,Gustavo);
+        BancoInfo[playerid][Depositado] -= Gustavo;
+        format(string,60,"Voce Sacou $%d",Gustavo);
+        SendClientMessage(playerid,-1,string);
+        Salvar(playerid);
+        }
+    }
+    if(dialogid == DDEPOSITAR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo > GetPlayerMoney(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce nao tem tudo isso");
+        GivePlayerMoney(playerid,-Gustavo);
+        BancoInfo[playerid][Depositado] += Gustavo;
+        Salvar(playerid);
+        format(string,50,"Voce depositou $%i",Gustavo);
+        SendClientMessage(playerid,-1,string);
+        }
+    }
+    if(dialogid == DSALDO)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo != BancoInfo[playerid][Senha]) return SendClientMessage(playerid,0xFF0000AA,"Senha Incorreta!");
+        format(string,100,"o Seu Saldo Bancario e de $%d",BancoInfo[playerid][Depositado]);
+        SendClientMessage(playerid,-1,string);
+        }
+    }
+    if(dialogid == DSENHADEPOSITAR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo != BancoInfo[playerid][Senha]) return SendClientMessage(playerid,0xFF0000AA,"Senha Incorreta!");
+        ShowPlayerDialog(playerid,DDEPOSITAR,DIALOG_STYLE_INPUT,"Depositar","Digite a Quantidade a ser Depositada","Depositar","Cancelar");
+        }
+    }
+    if(dialogid == DTRANSFERIR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(Gustavo != BancoInfo[playerid][Senha]) return SendClientMessage(playerid,0xFF0000AA,"Senha Incorreta!");
+        ShowPlayerDialog(playerid,DTRANSFERIRNUMERO,DIALOG_STYLE_INPUT,"Numero da Conta","Digite o Numero da conta na qual voce quer Transferir","Ok","Cancelar");
+        }
+    }
+    if(dialogid == DTRANSFERIRNUMERO)
+    {
+        if(response)
+        {
+            SetPVarInt(playerid, "ReceptorDeposito", strval(inputtext));
+            ShowPlayerDialog(playerid, DTRANSFERIRVALOR, DIALOG_STYLE_INPUT, "Depósito bancário", "Digite o valor à ser depositado", "Ok", "Cancelar");
+        }
+    }
+    if(dialogid == DTRANSFERIRVALOR)
+    {
+        if(response)
+        {
+        new Gustavo = strval(inputtext);
+        if(BancoInfo[playerid][Depositado] < Gustavo) return SendClientMessage(playerid,-1,"Voce Nao tem tudo isso na sua conta");
+        new receptor = GetPVarInt(playerid, "ReceptorDeposito");
+
+        for(new i = 0; i < MAX_PLAYERS; i++)
+
+	    {
+	        if(receptor == BancoInfo[i][Numero]) //Esse [numero] é o numero da conta do cara
+	        {
+	            DeletePVar(playerid, "ReceptorDeposito");
+                BancoInfo[i][Depositado] += Gustavo;
+                BancoInfo[playerid][Depositado] -= Gustavo;
+                format(string,50,"Voce Transferiu $%d",Gustavo);
+                SendClientMessage(playerid,-1,string);
+	            break;
+	        }
+	    }
+
+        }
+    }
+
+    if(dialogid == DCRIARCONTA)
+    {
+        if(response)
+        {
+        ShowPlayerDialog(playerid,DSENHACONTA,DIALOG_STYLE_INPUT,"Criar Conta No Banco","Digite Uma Senha para criar sua Conta no Banco","Sim","Não");
+        }
+    }
+    if(dialogid == DSENHACONTA)
+    {
+        if(response)
+        {
+        new NConta = 1000 + random(999999);
+        new Gustavo = strval(inputtext);
+        BancoInfo[playerid][Numero] = NConta;
+        BancoInfo[playerid][Senha] = Gustavo;
+        BancoInfo[playerid][Conta] = 1;
+        SendClientMessage(playerid,0x008000AA,"Conta Criada Com Sucesso!,use /ajudabanco para ver os comandos");
+        GetPlayerName(playerid,nome,24);
+        format(arquivo, sizeof(arquivo),"Banco/%s.ini", nome);
+        INI_Create(arquivo);
+        INI_Open(arquivo);
+        INI_WriteInt("Senha",Gustavo);
+        INI_WriteInt("Numero",NConta);
+        INI_WriteInt("Conta",BancoInfo[playerid][Conta]);
+        INI_WriteInt("Depositado",0);
+        INI_Save();
+        INI_Close();
+        format(string,50,"O Numero da sua Conta é: %d",BancoInfo[playerid][Numero]);
+        SendClientMessage(playerid,-1,string);
+        }
+    }
+	return 1;
+}
+/*MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMM| Comandos do Bank System |MMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM*/
+CMD:saldo(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao tem Uma Conta!");
+ShowPlayerDialog(playerid,DSALDO,DIALOG_STYLE_INPUT,"Digite Sua Senha","Digite Sua Senha Para Poder ver o seu Saldo","Ok","Cancelar");
+return 1;
+}
+CMD:criarconta(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] >= 1) return SendClientMessage(playerid,-1,"Voce ja tem Uma Conta!");
+ShowPlayerDialog(playerid,DCRIARCONTA,DIALOG_STYLE_MSGBOX,"Criar Conta No Banco","Ola,Voce Deseja Criar uma conta no Banco?","Sim","Não");
+return 1;
+}
+CMD:sacar(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return ShowPlayerDialog(playerid,DCRIARCONTA,DIALOG_STYLE_MSGBOX,"Conta no Banco","Voce nao tem uma conta no Banco,Deseja Criar Uma?","Sim","Não");
+ShowPlayerDialog(playerid,DSENHA,DIALOG_STYLE_INPUT,"Digitar Senha","Digite a Sua Senha Para Poder Sacar","Ok","Cancelar");
+return 1;
+}
+CMD:depositar(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return ShowPlayerDialog(playerid,DCRIARCONTA,DIALOG_STYLE_MSGBOX,"Conta no Banco","Voce nao tem uma conta no Banco,Deseja Criar Uma?","Sim","Não");
+ShowPlayerDialog(playerid,DSENHADEPOSITAR,DIALOG_STYLE_INPUT,"Digitar Senha","Digite a Sua Senha Para Poder Depositar","Ok","Cancelar");
+return 1;
+}
+CMD:mudarsenha(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return ShowPlayerDialog(playerid,DCRIARCONTA,DIALOG_STYLE_MSGBOX,"Conta no Banco","Voce nao tem uma conta no Banco,Deseja Criar Uma?","Sim","Não");
+ShowPlayerDialog(playerid,DSENHACONFIRMAR,DIALOG_STYLE_INPUT,"Digitar Senha","Digite a Sua Senha Atual Para poder Muda-la","Ok","Cancelar");
+return 1;
+}
+CMD:fecharconta(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return SendClientMessage(playerid,-1,"Voce nao tem conta,ou ja fechou ou ainda nao criou.");
+GivePlayerMoney(playerid,BancoInfo[playerid][Depositado]);
+BancoInfo[playerid][Conta] = 0;
+SendClientMessage(playerid,-1,"Conta fechada!");
+Salvar(playerid);
+return 1;
+}
+CMD:transferir(playerid,params[])
+{
+if(!IsPlayerInBank(playerid)) return SendClientMessage(playerid,0xFF0000AA,"Voce Nao Esta em um Banco!");
+if(BancoInfo[playerid][Conta] == 0) return ShowPlayerDialog(playerid,DCRIARCONTA,DIALOG_STYLE_MSGBOX,"Conta no Banco","Voce nao tem uma conta no Banco,Deseja Criar Uma?","Sim","Não");
+ShowPlayerDialog(playerid,DTRANSFERIR,DIALOG_STYLE_INPUT,"Transferir dinheiro","Coloque a Sua Senha do Banco para poder Transferir","Ok","Cancelar");
+return 1;
+}
+CMD:info(playerid,params[])
+{
+if(BancoInfo[playerid][Conta] == 0) return SendClientMessage(playerid,-1,"Voce nao tem Conta ainda");
+format(string,128,"Numero da Conta: %d",BancoInfo[playerid][Numero]);
+ShowPlayerDialog(playerid,DINFO,DIALOG_STYLE_MSGBOX,"Informaçoes de Sua Conta",string,"Ok","");
+return 1;
+}
+
+CMD:ajudabanco(playerid,params[])
+{
+SendClientMessage(playerid,-1,"___________________________________________________________________");
+SendClientMessage(playerid,0x008000AA,"/saldo,/criarconta,/sacar,/depositar,/mudarsenha,/fecharconta /info");
+SendClientMessage(playerid,-1,"___________________________________________________________________");
+return 1;
+}
+forward IsPlayerInBank(playerid);
+public IsPlayerInBank(playerid)
+{
+    if(IsPlayerInRangeOfPoint(playerid,1.3,1550.5789794922, -1669.7015380859, 13.204420089722)) return 1; //Caixa eletronico em Frente a DP
+    else if(IsPlayerInRangeOfPoint(playerid,1.3,1550.6994628906, -1681.2255859375, 13.204420089722)) return 1;  //Caixa eletronico em Frente a DP
+	return 0;
+}
+stock Salvar(playerid)
+{
+    format(arquivo, sizeof(arquivo),"Banco/%s.ini", nome);    
+    INI_Open(arquivo);
+    INI_WriteInt("Senha",BancoInfo[playerid][Senha]);
+    INI_WriteInt("Numero",BancoInfo[playerid][Numero]);
+    INI_WriteInt("Conta",BancoInfo[playerid][Conta]);
+    INI_WriteInt("Depositado",BancoInfo[playerid][Depositado]);
+    INI_Save();
+    INI_Close();
+    return 1;
+}
+stock Carregar(playerid)
+{
+    GetPlayerName(playerid,nome,24);
+    format(arquivo, sizeof(arquivo),"Banco/%s.ini", nome);
+    if(!fexist(arquivo)) return 0x1;
+    INI_Open(arquivo);
+    BancoInfo[playerid][Senha] = INI_ReadInt("Senha");
+    BancoInfo[playerid][Numero] = INI_ReadInt("Numero");
+    BancoInfo[playerid][Conta] = INI_ReadInt("Conta");
+    BancoInfo[playerid][Depositado] = INI_ReadInt("Depositado");
+    INI_Close();
+    return 1;
+}
