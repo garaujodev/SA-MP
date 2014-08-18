@@ -1,0 +1,11 @@
+stock ReturnID(name[])
+{
+    new strName[24];
+    for(new i; i < MAX_PLAYERS; i++) {
+        if(IsPlayerConnected(i)) {
+            GetPlayerName( i, strName, 24);
+            if(!strcmp( trName, name, true)) return i;
+        }
+    }
+    return 0;
+}
