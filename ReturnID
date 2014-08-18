@@ -7,5 +7,5 @@ stock ReturnID(name[])
             if(!strcmp( trName, name, true)) return i;
         }
     }
-    return 0;
+    return -1;
 }
