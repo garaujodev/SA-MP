@@ -1,0 +1,29 @@
+#include <a_http>
+
+forward PlayAudioStreamByName(playerid, name[]);
+forward PlayAudioStreamByNameEx(index, response_code, data[]);
+
+public PlayAudioStreamByName(playerid, name[])
+{
+    for(new i; i < strlen(name); i++) {
+        if(name[i] == ' ') name[i] = '+';
+    }
+    new str[160];
+    format(str, 160, "127.0.0.1:8080/SAMP.php?q=%s", name);
+    HTTP(playerid, HTTP_GET, str, "", "PlayAudioStreamByNameEx");
+    return 1;
+}
+
+public PlayAudioStreamByNameEx(index, response_code, data[])
+{
+    if(response_code == 200) return PlayAudioStreamForPlayer(index, data);
+    return 1;
+}
+
+CMD:play(playerid, params[])
+{
+    new M[20];
+    if(sscanf(params, "s[50]", M)) return SendClientMessage(playerid, -1, "Usage /play [Music Name]");
+    PlayAudioStreamByName(playerid, M);
+    return 1;
+}
