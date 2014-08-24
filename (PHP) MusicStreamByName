@@ -1,0 +1,10 @@
+<?php 
+
+    $pesquisa = str_replace(' ', '+', $_GET['q']); 
+    $musica = file_get_contents('http://search.4shared.com/q/CCQD/1/music/' .$pesquisa); 
+
+    $pos = strpos($musica, "showMediaPreview(event, '") + 25; 
+    $resto = strpos($musica, "/preview.mp3") + 12; 
+    $link = substr($musica, $pos, $resto-$pos); 
+    echo $link; 
+?>
